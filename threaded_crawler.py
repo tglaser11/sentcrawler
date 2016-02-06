@@ -14,7 +14,7 @@ import Queue
 
 SLEEP_TIME = 1
 
-def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, headers=None, user_agent='wswp', proxy=None, num_retries=1, max_threads=10, scrape_callback=None):
+def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, headers=None, user_agent='ice-ix', proxy=None, num_retries=1, max_threads=10, scrape_callback=None):
 
 
 
@@ -145,7 +145,7 @@ def download(url, headers, proxy, num_retries, data=None):
         proxy_params = {urlparse.urlparse(url).scheme: proxy}
         opener.add_handler(urllib2.ProxyHandler(proxy_params))
     try:
-        response = opener.open(request)
+        response = opener.open(request, timeout=60)
         html = response.read()
         code = response.code
     except urllib2.URLError as e:
@@ -230,10 +230,8 @@ if __name__ == '__main__':
     '''
        Improvement ideas:
         -- collect negative words by parent site and by word, store in rdbms and collect SPX, GOLD values for later analytics
-        -- only scrape from HTML Body using better regex matchgin
+        -- only scrape from HTML Body using better regex matching
         -- scrape positive words to measure positive sentiment
-        -- check throttling
-        -- download timeout
         -- pass in word inputs via config file
 
 
