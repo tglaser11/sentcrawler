@@ -1,5 +1,3 @@
-import time
-
 
 import threading
 import re
@@ -59,7 +57,7 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                         if scrape_callback:
                             # links.extend(scrape_callback(url, html) or [])
                             wst = scrape_callback(url, html)
-                            words_found = words_found + wst
+                            words_found = words_found + wst['totalwords']
                         if depth != max_depth:
                             # can still crawl further
                             if link_regex:
@@ -82,7 +80,7 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                             break
                     else:
                         print 'Blocked by robots.txt:', url
-        return_que.put(words_found)
+            return_que.put([seed_url, words_found])
 
 
     # multi-thread download and scraping work
@@ -108,9 +106,9 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
         time.sleep(SLEEP_TIME)
 
     while not return_que.empty():
-        words = return_que.get()
-        print(words)
-        words_seen = words_seen + words
+        url_words = return_que.get()
+        print(url_words)
+        words_seen = words_seen + url_words[1]
 
     return words_seen
 
@@ -199,12 +197,17 @@ def scrape_callback(url, html):
                 'sluggish', 'weak', 'plunge', 'slide', 'shortfall', 'fear', 'doubt', 'panic', 'jitters', 'worry',
                 'terror','concern', 'bankrupt', 'insolvent', 'uncertain', 'crash' ]
     i = 0
+    word_subtotals = {}
     for word in negwords:
-        i = i + html.count(word)
+        wcount = html.count(word)
+        i = i + wcount
+        word_subtotals[word] = wcount
 
-
+    word_subtotals['totalwords'] = i
     print url, i
-    return i
+    print word_subtotals
+    # return i
+    return word_subtotals
 
 
 
@@ -222,7 +225,7 @@ if __name__ == '__main__':
 
 
 
-    total_words = link_crawler(urls, '/*', max_depth=1, max_urls=20, scrape_callback=scrape_callback)
+    total_words = link_crawler(urls, '/*', max_depth=1, max_urls=5, scrape_callback=scrape_callback)
 
     print('Total words: ')
     print total_words
