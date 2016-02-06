@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 import robotparser
 import Queue
+import pandas as pd
 
 
 SLEEP_TIME = 1
@@ -20,6 +21,7 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
 
     def worker():
         words_found=0
+
         while True:
 
             try:
@@ -31,12 +33,14 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
 
                 """Crawl from the given seed URL following links matched by link_regex
                 """
+
                 # the queue of URL's that still need to be crawled
                 crawl_queue = [seed_url]
                 # the URL's that have been seen and at what depth
                 seen = {seed_url: 0}
                 # track how many URL's have been downloaded
                 num_urls = 0
+                df_sitewords = pd.DataFrame()
 
 
                 rp = get_robots(seed_url)
@@ -45,6 +49,8 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                 headers = {}
                 if user_agent:
                     headers['User-agent'] = user_agent
+
+
 
                 while crawl_queue:
                     url = crawl_queue.pop()
@@ -57,6 +63,13 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                         if scrape_callback:
                             # links.extend(scrape_callback(url, html) or [])
                             wst = scrape_callback(url, html)
+                            wst['url'] = seed_url
+                            df_sub = pd.DataFrame.from_dict([wst])
+                            df_sub = df_sub.set_index('url')
+                            if df_sitewords.empty:
+                                df_sitewords = df_sub
+                            else:
+                                df_sitewords = df_sitewords.add(df_sub)
                             words_found = words_found + wst['totalwords']
                         if depth != max_depth:
                             # can still crawl further
@@ -80,7 +93,7 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                             break
                     else:
                         print 'Blocked by robots.txt:', url
-            return_que.put([seed_url, words_found])
+                return_que.put([seed_url, words_found, df_sitewords])
 
 
     # multi-thread download and scraping work
@@ -105,12 +118,17 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
         # sleep temporarily so CPU can focus execution on other threads
         time.sleep(SLEEP_TIME)
 
+    df_results = pd.DataFrame()
     while not return_que.empty():
         url_words = return_que.get()
-        print(url_words)
+        # print(url_words[2])
         words_seen = words_seen + url_words[1]
+        if df_results.empty:
+            df_results = url_words[2]
+        else:
+            df_results = df_results.append(url_words[2])
 
-    return words_seen
+    return df_results, words_seen
 
 
 class Throttle:
@@ -225,7 +243,8 @@ if __name__ == '__main__':
 
 
 
-    total_words = link_crawler(urls, '/*', max_depth=1, max_urls=5, scrape_callback=scrape_callback)
+    df_results, total_words = link_crawler(urls, '/*', max_depth=1, max_urls=5, scrape_callback=scrape_callback)
+    print df_results
 
     print('Total words: ')
     print total_words
