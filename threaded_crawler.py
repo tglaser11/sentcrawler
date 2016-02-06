@@ -85,7 +85,7 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
         return_que.put(words_found)
 
 
-    # wait for all download threads to finish
+    # multi-thread download and scraping work
     threads = []
     return_que = Queue.Queue()
 
