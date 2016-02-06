@@ -63,10 +63,11 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                         html = download(url, headers, proxy=proxy, num_retries=num_retries)
                         links = []
                         if scrape_callback:
-                            # links.extend(scrape_callback(url, html) or [])
+
                             wst = scrape_callback(url, html)
                             wst['url'] = seed_url
                             wst['date'] = date.today().isoformat()
+                            wst['site_pgs_scanned'] = 1
                             df_sub = pd.DataFrame.from_dict([wst])
                             df_sub = df_sub.set_index(['date','url'])
                             if df_sitewords.empty:
@@ -94,8 +95,10 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                         num_urls += 1
                         if num_urls == max_urls:
                             break
+
                     else:
                         print 'Blocked by robots.txt:', url
+
                 return_que.put([seed_url, words_found, df_sitewords])
 
 
@@ -214,7 +217,7 @@ def get_links(html):
 def scrape_callback(url, html):
 
     negwords = ['anxiety', 'debt', 'recession', 'depress', 'slowdown', 'stagnant', 'decline', 'downturn', 'downtrend', 'loan',
-                'deficit', 'collapse', 'deflation', 'inflation', 'slump', 'trouble', 'tumble', 'strike',
+                'deficit', 'deflation', 'inflation', 'slump', 'trouble', 'tumble', 'strike',
                 'sluggish', 'weak', 'plunge', 'shortfall', 'fear', 'doubt', 'panic', 'jitters', 'worry',
                 'terror','concern', 'bankrupt', 'insolvent', 'uncertain', 'crash' ]
     i = 0
@@ -235,7 +238,6 @@ def scrape_callback(url, html):
 
 if __name__ == '__main__':
 
-    # urls = alexa(30)
 
     urls = []
     with open('topnews.csv', 'rb') as csvfile:
@@ -247,7 +249,7 @@ if __name__ == '__main__':
 
 
 
-    df_results, total_words = link_crawler(urls, '/*', max_depth=1, max_urls=20, scrape_callback=scrape_callback)
+    df_results, total_words = link_crawler(urls, '/*', max_depth=1, max_urls=30, scrape_callback=scrape_callback)
     # print df_results
     dt = date.today().strftime('%Y-%m-%d')
     outfilename = dt + 'output.csv'
@@ -262,7 +264,7 @@ if __name__ == '__main__':
         -- only scrape from HTML Body using better regex matching
         -- scrape positive words to measure positive sentiment
         -- pass in word inputs via config file
-        -- add number of pages scanned on website
+
 
 
     '''
