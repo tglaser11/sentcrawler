@@ -5,7 +5,7 @@ import csv
 import urlparse
 import urllib2
 import time
-from datetime import datetime
+from datetime import datetime, date
 import robotparser
 import Queue
 import pandas as pd
@@ -20,7 +20,7 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
     words_seen = 0
 
     def worker():
-        words_found=0
+
 
         while True:
 
@@ -41,6 +41,8 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                 # track how many URL's have been downloaded
                 num_urls = 0
                 df_sitewords = pd.DataFrame()
+                words_found=0
+
 
 
                 rp = get_robots(seed_url)
@@ -64,8 +66,9 @@ def link_crawler(urls, link_regex=None, delay=1, max_depth=-1, max_urls=-1, head
                             # links.extend(scrape_callback(url, html) or [])
                             wst = scrape_callback(url, html)
                             wst['url'] = seed_url
+                            wst['date'] = date.today().isoformat()
                             df_sub = pd.DataFrame.from_dict([wst])
-                            df_sub = df_sub.set_index('url')
+                            df_sub = df_sub.set_index(['date','url'])
                             if df_sitewords.empty:
                                 df_sitewords = df_sub
                             else:
@@ -210,16 +213,17 @@ def get_links(html):
 
 def scrape_callback(url, html):
 
-    negwords = ['debt', 'recession', 'depress', 'slowdown', 'stagnant', 'decline', 'downturn', 'downtrend', 'loan',
-                'deficit', 'collapse', 'deflation', 'inflation', 'slump', 'trouble', 'tumble', 'drop', 'strike',
-                'sluggish', 'weak', 'plunge', 'slide', 'shortfall', 'fear', 'doubt', 'panic', 'jitters', 'worry',
+    negwords = ['anxiety', 'debt', 'recession', 'depress', 'slowdown', 'stagnant', 'decline', 'downturn', 'downtrend', 'loan',
+                'deficit', 'collapse', 'deflation', 'inflation', 'slump', 'trouble', 'tumble', 'strike',
+                'sluggish', 'weak', 'plunge', 'shortfall', 'fear', 'doubt', 'panic', 'jitters', 'worry',
                 'terror','concern', 'bankrupt', 'insolvent', 'uncertain', 'crash' ]
     i = 0
     word_subtotals = {}
     for word in negwords:
         wcount = html.count(word)
         i = i + wcount
-        word_subtotals[word] = wcount
+        wordlabel = 'word-' + word
+        word_subtotals[wordlabel] = wcount
 
     word_subtotals['totalwords'] = i
     print url, i
@@ -243,8 +247,11 @@ if __name__ == '__main__':
 
 
 
-    df_results, total_words = link_crawler(urls, '/*', max_depth=1, max_urls=5, scrape_callback=scrape_callback)
-    print df_results
+    df_results, total_words = link_crawler(urls, '/*', max_depth=1, max_urls=20, scrape_callback=scrape_callback)
+    # print df_results
+    dt = date.today().strftime('%Y-%m-%d')
+    outfilename = dt + 'output.csv'
+    df_results.to_csv(outfilename)
 
     print('Total words: ')
     print total_words
@@ -255,6 +262,7 @@ if __name__ == '__main__':
         -- only scrape from HTML Body using better regex matching
         -- scrape positive words to measure positive sentiment
         -- pass in word inputs via config file
+        -- add number of pages scanned on website
 
 
     '''
